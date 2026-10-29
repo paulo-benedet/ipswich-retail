@@ -28,7 +28,7 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        run: python -m pip install -r requirements.txt
+        run: python -m pip install -r requirements-dev.txt
 
       - name: Check Django configuration
         run: python manage.py check
@@ -38,3 +38,37 @@ jobs:
 
       - name: Run automated tests
         run: python manage.py test --verbosity 2
+
+      - name: Install Chromium for browser tests
+        run: python -m playwright install --with-deps chromium
+
+      - name: Test password toggle and login in Chromium
+        run: python manage.py test accounts.e2e --verbosity 2
+
+  docker:
+    name: Build and test Docker image
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+      - name: Build image
+        run: docker compose build
+      - name: Test application inside container
+        run: docker compose run --rm web python manage.py test --verbosity 2
+      - name: Prepare database
+        run: docker compose run --rm web python manage.py migrate --noinput
+      - name: Start application and check HTTP response
+        run: |
+          docker compose up -d
+          curl --fail --show-error --silent \
+            --retry 15 --retry-all-errors --retry-delay 2 \
+            --connect-timeout 5 --max-time 10 \
+            --output /dev/null \
+            http://127.0.0.1:8000/
+      - name: Show logs and clean up
+        if: always()
+        run: |
+          docker compose logs
+          docker compose down --volumes
