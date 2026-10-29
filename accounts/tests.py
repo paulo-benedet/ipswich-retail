@@ -66,3 +66,6 @@ class SignInTests(TestCase):
         self.assertRedirects(self.client.post('/?next=https://example.org', {
             'username': self.user.email, 'password': self.password,
         }), '/welcome/')
+    
+    def test_controlled_ci_failure(self):
+        self.fail("Controlled CI failure")
