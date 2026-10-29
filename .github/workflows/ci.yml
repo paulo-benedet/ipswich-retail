@@ -62,7 +62,11 @@ jobs:
       - name: Start application and check HTTP response
         run: |
           docker compose up -d
-          curl --fail --retry 10 --retry-connrefused --retry-delay 2 http://127.0.0.1:8000/
+          curl --fail --show-error --silent \
+            --retry 15 --retry-all-errors --retry-delay 2 \
+            --connect-timeout 5 --max-time 10 \
+            --output /dev/null \
+            http://127.0.0.1:8000/
       - name: Show logs and clean up
         if: always()
         run: |
