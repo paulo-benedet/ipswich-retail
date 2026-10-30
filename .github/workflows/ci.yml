@@ -70,6 +70,12 @@ jobs:
         run: docker compose build
       - name: Test application inside container
         run: docker compose run --rm web python manage.py test --verbosity 2
+      - name: Collect production static files inside container
+        run: >-
+          docker compose run --rm
+          -e DJANGO_DEBUG=0
+          -e DJANGO_SECRET_KEY=ci-only-static-collection-key
+          web python manage.py collectstatic --noinput
       - name: Prepare database
         run: docker compose run --rm web python manage.py migrate --noinput
       - name: Start application and check HTTP response
