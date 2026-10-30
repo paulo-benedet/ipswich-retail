@@ -6,4 +6,10 @@
 {{ form.username.label_tag }}{{ form.username }}{{ form.username.errors }}
 {{ form.password.label_tag }}
 <div class="password">{{ form.password }}<button class="toggle" id="password-toggle" type="button" aria-controls="id_password" aria-label="Show password" hidden>Show</button></div>{{ form.password.errors }}
-<button class="primary" type="submit">Sign in</button></form></section></div><script src="{% static 'password-toggle.js' %}" defer></script>{% endblock %}
+<button class="primary" type="submit">Sign in</button></form>
+{% if demo_details %}
+<div class="demo"><strong>Try the demonstration account</strong><p>Use sample details only. This account is shared by reviewers.</p><button id="use-demo" type="button" hidden>Use demo details</button><p id="demo-status" role="status"></p><noscript>Enable JavaScript to fill the demo details automatically.</noscript></div>
+{{ demo_details|json_script:"demo-details" }}
+<script src="{% static 'demo.js' %}" defer></script>
+{% endif %}
+</section></div><script src="{% static 'password-toggle.js' %}" defer></script>{% endblock %}

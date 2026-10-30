@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: ipswich-retail
+    runtime: docker
+    plan: free
+    branch: main
+    autoDeployTrigger: "off"
+    healthCheckPath: /health/
+    envVars:
+      - key: DJANGO_DEBUG
+        value: "0"
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false
+      - key: MONITORING_TOKEN
+        generateValue: true
+      - key: DJANGO_DEMO_ENABLED
+        value: "1"
