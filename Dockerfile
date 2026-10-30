@@ -8,5 +8,4 @@ RUN pip install --no-cache-dir -r requirements.txt \
 COPY --chown=appuser:appuser . .
 USER appuser
 EXPOSE 8000
-# Local PoC server; production hosting is addressed in the deployment issue.
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000", "--noreload"]
+CMD ["sh", "scripts/start.sh"]

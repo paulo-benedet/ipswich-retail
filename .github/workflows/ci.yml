@@ -14,8 +14,21 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: retail
+          POSTGRES_PASSWORD: ci-only-password
+          POSTGRES_DB: retail
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U retail -d retail"
+          --health-interval 5s --health-timeout 5s --health-retries 10
     env:
       DJANGO_DEBUG: "1"
+      DATABASE_URL: postgres://retail:ci-only-password@localhost:5432/retail
 
     steps:
       - name: Check out code
@@ -72,3 +85,28 @@ jobs:
         run: |
           docker compose logs
           docker compose down --volumes
+
+  deploy:
+    name: Deploy tested main revision
+    needs: [test, docker]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: production-deployment
+      cancel-in-progress: false
+    env:
+      APP_URL: ${{ vars.APP_URL }}
+      RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+      MONITORING_TOKEN: ${{ secrets.MONITORING_TOKEN }}
+      EXPECTED_REVISION: ${{ github.sha }}
+      CHECK_ATTEMPTS: "40"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Trigger deployment of the tested commit
+        run: python scripts/deploy.py
+      - name: Verify deployed revision, database availability and resource metrics
+        run: python scripts/check_service.py

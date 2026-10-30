@@ -1,4 +1,5 @@
 import os
+import dj_database_url
 from pathlib import Path
 from django.core.exceptions import ImproperlyConfigured
 
@@ -15,7 +16,7 @@ INSTALLED_APPS = [
     "django.contrib.messages", "django.contrib.staticfiles", "accounts",
 ]
 MIDDLEWARE = [
-    "django.middleware.security.SecurityMiddleware", "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.security.SecurityMiddleware", "whitenoise.middleware.WhiteNoiseMiddleware", "config.observability.RequestLoggingMiddleware", "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware", "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware", "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -49,3 +50,35 @@ SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
 SECURE_SSL_REDIRECT = not DEBUG
+
+# The demo credentials are intentionally public; never reuse them for a real account.
+DEMO_ENABLED = os.environ.get("DJANGO_DEMO_ENABLED", "1") == "1"
+DEMO_EMAIL = "demo@example.com"
+DEMO_PASSWORD = "Retail-Demo-73!"
+DATABASE_URL = os.environ.get("DATABASE_URL", "")
+if DATABASE_URL:
+    DATABASES["default"] = dj_database_url.parse(DATABASE_URL, conn_max_age=0)
+if os.environ.get("RENDER") == "true":
+    if not DATABASE_URL:
+        raise ImproperlyConfigured("Hosted deployment requires DATABASE_URL.")
+    # Render terminates HTTPS and supplies this header at its trusted proxy.
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    if os.environ.get("RENDER_EXTERNAL_HOSTNAME"):
+        ALLOWED_HOSTS.append(os.environ["RENDER_EXTERNAL_HOSTNAME"])
+        CSRF_TRUSTED_ORIGINS = ["https://" + os.environ["RENDER_EXTERNAL_HOSTNAME"]]
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage" if DEBUG else "whitenoise.storage.CompressedManifestStaticFilesStorage"},
+}
+MONITORING_TOKEN = os.environ.get("MONITORING_TOKEN", "")
+APP_REVISION = os.environ.get("RENDER_GIT_COMMIT", os.environ.get("APP_REVISION", "local"))
+LOGGING = {
+    "version": 1, "disable_existing_loggers": False,
+    "formatters": {"safe": {"()": "config.observability.SafeJsonFormatter"}},
+    "handlers": {"console": {"class": "logging.StreamHandler", "formatter": "safe"}},
+    "root": {"handlers": ["console"], "level": "INFO"},
+    "loggers": {
+        "django": {"handlers": ["console"], "level": "WARNING", "propagate": False},
+        "retail": {"handlers": ["console"], "level": "INFO", "propagate": False},
+    },
+}

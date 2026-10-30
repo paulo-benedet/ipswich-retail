@@ -1,0 +1,28 @@
+name: Service monitoring
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+    inputs:
+      failure_drill:
+        description: 'Test failure notification using an intentionally missing URL (no outage)'
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  availability:
+    if: vars.DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      APP_URL: ${{ vars.APP_URL }}
+      MONITORING_TOKEN: ${{ secrets.MONITORING_TOKEN }}
+      FAILURE_DRILL: ${{ inputs.failure_drill || 'false' }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Check health, response time and worker resources
+        run: python scripts/check_service.py
