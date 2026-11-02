@@ -7,4 +7,8 @@ from .models import Product
 @never_cache
 @login_required
 def products(request):
-    return render(request, "catalog/products.html", {"products": Product.objects.all()})
+    query = request.GET.get("q", "").strip()
+    products = Product.objects.all()
+    if query:
+        products = products.filter(name__icontains=query)
+    return render(request, "catalog/products.html", {"products": products, "query": query})

@@ -32,3 +32,35 @@ class CatalogueBrowserTests(StaticLiveServerTestCase):
                     page.screenshot(path=os.path.join(os.environ['CATALOG_SCREENSHOT_DIR'], 'catalog-mobile.png'), full_page=True)
             finally:
                 browser.close()
+
+    def test_search_and_clear_in_browser(self):
+        get_user_model().objects.create_user('search@example.com', 'Browser-only-73!')
+        call_command('seed_products')
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            try:
+                page = browser.new_page(viewport={'width': 390, 'height': 844})
+                page.goto(self.live_server_url)
+                page.get_by_label('Email address').fill('search@example.com')
+                page.get_by_label('Password:', exact=True).fill('Browser-only-73!')
+                page.get_by_role('button', name='Sign in', exact=True).click()
+                search = page.get_by_role('searchbox', name='Search products')
+                search.fill('StOnE')
+                search.press('Enter')
+                expect(page.get_by_role('article')).to_have_count(1)
+                expect(page.get_by_role('heading', name='Stoneware mug')).to_be_visible()
+                expect(search).to_have_value('StOnE')
+                search.fill('no-such-product')
+                search.press('Enter')
+                expect(page.get_by_role('status')).to_contain_text('No products match')
+                page.get_by_role('link', name='Clear search', exact=True).click()
+                expect(page.get_by_role('article')).to_have_count(6)
+                expect(search).to_have_value('')
+                search.fill('mug')
+                search.press('Enter')
+                search.fill('')
+                search.press('Enter')
+                expect(page.get_by_role('article')).to_have_count(6)
+                self.assertTrue(page.evaluate('document.documentElement.scrollWidth <= window.innerWidth'))
+            finally:
+                browser.close()
