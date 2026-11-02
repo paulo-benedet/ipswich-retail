@@ -1,0 +1,10 @@
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render
+from django.views.decorators.cache import never_cache
+from .models import Product
+
+
+@never_cache
+@login_required
+def products(request):
+    return render(request, "catalog/products.html", {"products": Product.objects.all()})

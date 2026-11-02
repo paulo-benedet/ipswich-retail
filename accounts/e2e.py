@@ -25,8 +25,8 @@ class PasswordToggleBrowserTests(StaticLiveServerTestCase):
                 expect(password).to_have_value(secret)
                 page.get_by_label("Email address").fill("browser@example.com")
                 page.get_by_role("button", name="Sign in", exact=True).click()
-                expect(page).to_have_url(self.live_server_url + "/welcome/")
-                expect(page.get_by_text("You have signed in successfully", exact=False)).to_be_visible()
+                expect(page).to_have_url(self.live_server_url + "/products/")
+                expect(page.get_by_text("A few good things for your home.", exact=False)).to_be_visible()
             finally:
                 browser.close()
 
@@ -46,11 +46,11 @@ class PasswordToggleBrowserTests(StaticLiveServerTestCase):
                 expect(password).to_have_value(settings.DEMO_PASSWORD)
                 expect(password).to_have_attribute('type', 'password')
                 expect(page).to_have_url(self.live_server_url + '/')
-                # Protected welcome still redirects: filling the form did not log in.
-                page.goto(self.live_server_url + '/welcome/')
-                expect(page).to_have_url(self.live_server_url + '/?next=/welcome/')
+                # Protected catalogue still redirects: filling the form did not log in.
+                page.goto(self.live_server_url + '/products/')
+                expect(page).to_have_url(self.live_server_url + '/?next=/products/')
                 page.get_by_role('button', name='Use demo details').click()
                 page.get_by_role('button', name='Sign in', exact=True).click()
-                expect(page).to_have_url(self.live_server_url + '/welcome/')
+                expect(page).to_have_url(self.live_server_url + '/products/')
             finally:
                 browser.close()

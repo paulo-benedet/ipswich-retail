@@ -14,7 +14,7 @@ class DemoTests(TestCase):
         self.assertFalse(user.is_staff)
         self.assertFalse(user.is_superuser)
         self.assertTrue(user.check_password(settings.DEMO_PASSWORD))
-        self.assertRedirects(self.client.post('/', {'username': settings.DEMO_EMAIL, 'password': settings.DEMO_PASSWORD}), '/welcome/')
+        self.assertRedirects(self.client.post('/', {'username': settings.DEMO_EMAIL, 'password': settings.DEMO_PASSWORD}), '/products/')
 
     def test_existing_account_cannot_be_overwritten(self):
         user = get_user_model().objects.create_user(settings.DEMO_EMAIL, 'Private-password-73!')
