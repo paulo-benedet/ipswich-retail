@@ -13,7 +13,7 @@ if not SECRET_KEY:
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,[::1]").split(",")
 INSTALLED_APPS = [
     "django.contrib.auth", "django.contrib.contenttypes", "django.contrib.sessions",
-    "django.contrib.messages", "django.contrib.staticfiles", "accounts",
+    "django.contrib.messages", "django.contrib.staticfiles", "accounts", "catalog",
 ]
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware", "whitenoise.middleware.WhiteNoiseMiddleware", "config.observability.RequestLoggingMiddleware", "django.contrib.sessions.middleware.SessionMiddleware",
@@ -37,7 +37,7 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 LOGIN_URL = "login"
-LOGIN_REDIRECT_URL = "welcome"
+LOGIN_REDIRECT_URL = "products"
 LANGUAGE_CODE = "en-gb"
 TIME_ZONE = "Europe/London"
 USE_I18N = True

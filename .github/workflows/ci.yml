@@ -55,8 +55,8 @@ jobs:
       - name: Install Chromium for browser tests
         run: python -m playwright install --with-deps chromium
 
-      - name: Test password toggle and login in Chromium
-        run: python manage.py test accounts.e2e --verbosity 2
+      - name: Test login and product browsing in Chromium
+        run: python manage.py test accounts.e2e catalog.e2e --verbosity 2
 
   docker:
     name: Build and test Docker image
