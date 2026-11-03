@@ -64,3 +64,34 @@ class CatalogueBrowserTests(StaticLiveServerTestCase):
                 self.assertTrue(page.evaluate('document.documentElement.scrollWidth <= window.innerWidth'))
             finally:
                 browser.close()
+
+    def test_category_filter_combines_with_search(self):
+        get_user_model().objects.create_user('filter@example.com', 'Browser-only-73!')
+        call_command('seed_products')
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            try:
+                page = browser.new_page(viewport={'width': 390, 'height': 844})
+                page.goto(self.live_server_url)
+                page.get_by_label('Email address').fill('filter@example.com')
+                page.get_by_label('Password:', exact=True).fill('Browser-only-73!')
+                page.get_by_role('button', name='Sign in', exact=True).click()
+                category = page.get_by_label('Category', exact=True)
+                search = page.get_by_role('searchbox', name='Search products')
+                category.select_option('Kitchen')
+                expect(page.get_by_role('article')).to_have_count(2)
+                search.fill('MUG')
+                search.press('Enter')
+                expect(page.get_by_role('article')).to_have_count(1)
+                category.select_option('Living')
+                expect(page.get_by_role('status')).to_contain_text('No products match')
+                expect(search).to_have_value('MUG')
+                page.get_by_role('link', name='Clear search', exact=True).click()
+                expect(page.get_by_role('article')).to_have_count(3)
+                expect(category).to_have_value('Living')
+                expect(search).to_have_value('')
+                category.select_option('')
+                expect(page.get_by_role('article')).to_have_count(6)
+                self.assertTrue(page.evaluate('document.documentElement.scrollWidth <= window.innerWidth'))
+            finally:
+                browser.close()
