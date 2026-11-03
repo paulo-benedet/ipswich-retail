@@ -20,7 +20,7 @@ class CatalogueBrowserTests(StaticLiveServerTestCase):
                 expect(page.get_by_role('article')).to_have_count(6)
                 expect(page.get_by_role('heading', name='A few good things for your home.')).to_be_visible()
                 expect(page.get_by_role('button', name='Sold out', exact=True)).to_be_disabled()
-                self.assertTrue(page.locator('.picture img').evaluate_all('(imgs) => imgs.every(img => img.complete && img.naturalWidth > 0)'))
+                page.wait_for_function("() => { const imgs = [...document.querySelectorAll('.picture img')]; return imgs.length === 6 && imgs.every(img => img.complete && img.naturalWidth > 0); }")
                 expect(page.get_by_text('Currently unavailable', exact=True)).to_be_visible()
                 expect(page.get_by_text('£12.00', exact=True)).to_be_visible()
                 import os
@@ -92,6 +92,39 @@ class CatalogueBrowserTests(StaticLiveServerTestCase):
                 expect(search).to_have_value('')
                 category.select_option('')
                 expect(page.get_by_role('article')).to_have_count(6)
+                self.assertTrue(page.evaluate('document.documentElement.scrollWidth <= window.innerWidth'))
+            finally:
+                browser.close()
+
+    def test_add_quantity_stock_limit_and_session_persistence(self):
+        get_user_model().objects.create_user('basket@example.com', 'Browser-only-73!')
+        call_command('seed_products')
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            try:
+                page = browser.new_page(viewport={'width': 390, 'height': 844})
+                page.goto(self.live_server_url)
+                page.get_by_label('Email address').fill('basket@example.com')
+                page.get_by_label('Password:', exact=True).fill('Browser-only-73!')
+                page.get_by_role('button', name='Sign in', exact=True).click()
+                card = page.get_by_role('article').filter(has=page.get_by_role('heading', name='Stoneware mug', exact=True))
+                quantity = card.get_by_role('spinbutton')
+                expect(quantity).to_have_value('1')
+                card.get_by_role('button', name='Increase quantity for Stoneware mug', exact=True).click()
+                expect(quantity).to_have_value('2')
+                card.get_by_role('button', name='+ Add to basket', exact=True).click()
+                expect(page.get_by_role('status')).to_contain_text('Added 2 × Stoneware mug')
+                expect(card.get_by_text('In your basket: 2', exact=True)).to_be_visible()
+                page.get_by_label('Category', exact=True).select_option('Living')
+                expect(page.get_by_role('button', name='Sold out', exact=True)).to_be_disabled()
+                page.get_by_label('Category', exact=True).select_option('Kitchen')
+                expect(card.get_by_text('In your basket: 2', exact=True)).to_be_visible()
+                quantity.fill('10')
+                card.get_by_role('button', name='+ Add to basket', exact=True).click()
+                expect(card.get_by_text('In your basket: 12', exact=True)).to_be_visible()
+                expect(card.get_by_role('button', name='Stock limit reached')).to_be_disabled()
+                page.reload()
+                expect(card.get_by_text('In your basket: 12', exact=True)).to_be_visible()
                 self.assertTrue(page.evaluate('document.documentElement.scrollWidth <= window.innerWidth'))
             finally:
                 browser.close()
