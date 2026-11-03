@@ -5,13 +5,16 @@
 <section class="intro"><div><p class="eyebrow">THE EVERYDAY COLLECTION</p><h1>A few good things for your home.</h1><p>Browse the collection and choose what goes in your basket.</p></div><aside class="summary" aria-label="Basket summary"><span>Your basket · 0 items</span><strong>£0.00</strong><button disabled title="Available in a later story">View basket →</button></aside></section>
 <form class="search" method="get" action="{% url 'products' %}" role="search">
 <input type="search" name="q" aria-label="Search products" aria-describedby="search-help" placeholder="Search products..." value="{{ query }}">
-<select aria-label="Category" disabled><option>All categories</option></select>
+<select name="category" id="category-filter" aria-label="Category" onchange="this.form.requestSubmit()">
+<option value="">All categories</option>
+{% for category in categories %}<option value="{{ category }}"{% if category == selected_category %} selected{% endif %}>{{ category }}</option>{% endfor %}
+</select><noscript><button type="submit">Apply filters</button></noscript>
 <button type="submit" class="visually-hidden">Search</button>
 </form>
-<p class="search-help" id="search-help">Type a product name and press Enter.{% if query %} <a href="{% url 'products' %}" class="clear-search">Clear search</a>{% endif %}</p>
+<p class="search-help" id="search-help">Type a product name and press Enter.{% if query %} <a href="{{ clear_search_url }}" class="clear-search">Clear search</a>{% endif %}</p>
 <p class="count">{{ products|length }} product{{ products|length|pluralize }}</p>
 <div class="products">{% for product in products %}<article class="product" aria-labelledby="product-{{ product.pk }}">
 <div class="picture picture-{{ product.sku }}">{% with asset='products/'|add:product.sku|add:'.svg' %}<img src="{% static asset %}" alt="" width="110" height="100">{% endwith %}</div>
-<div class="card-content"><div class="category">{{ product.category }}</div><h2 id="product-{{ product.pk }}">{{ product.name }}</h2><p class="description">{{ product.description }}</p><div class="details"><div><strong class="price">£{{ product.price|floatformat:2 }}</strong><span class="availability">{% if product.stock %}{{ product.stock }} available{% else %}Currently unavailable{% endif %}</span></div><button disabled class="add {% if not product.stock %}sold-out{% endif %}" title="{% if product.stock %}Basket functionality will be added in issue 16{% else %}Out of stock{% endif %}">{% if product.stock %}+ Add to basket{% else %}Sold out{% endif %}</button></div></div></article>{% empty %}{% if query %}<p class="empty-results" role="status">No products match “{{ query }}”. Try another product name or <a href="{% url 'products' %}">clear your search</a>.</p>{% else %}<p>No products are available at the moment. Please check back soon.</p>{% endif %}{% endfor %}</div>
-<p class="notice">Browse or search the collection. Category filters and basket controls will be available soon.</p>
+<div class="card-content"><div class="category">{{ product.category }}</div><h2 id="product-{{ product.pk }}">{{ product.name }}</h2><p class="description">{{ product.description }}</p><div class="details"><div><strong class="price">£{{ product.price|floatformat:2 }}</strong><span class="availability">{% if product.stock %}{{ product.stock }} available{% else %}Currently unavailable{% endif %}</span></div><button disabled class="add {% if not product.stock %}sold-out{% endif %}" title="{% if product.stock %}Basket functionality will be added in issue 16{% else %}Out of stock{% endif %}">{% if product.stock %}+ Add to basket{% else %}Sold out{% endif %}</button></div></div></article>{% empty %}{% if query %}<p class="empty-results" role="status">No products match “{{ query }}”{% if selected_category %} in {{ selected_category }}{% endif %}. Try another product name or <a href="{{ clear_search_url }}">clear your search</a>.</p>{% else %}<p>No products are available at the moment. Please check back soon.</p>{% endif %}{% endfor %}</div>
+<p class="notice">Browse, search or filter the collection. Basket controls will be available soon.</p>
 </main></body></html>
