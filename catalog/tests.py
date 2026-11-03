@@ -20,7 +20,7 @@ class CatalogueTests(TestCase):
         response = self.client.get("/products/")
         for text in ["Test mug", "£8.50", "3 available", "Test pen", "£2.00", "Currently unavailable"]:
             self.assertContains(response, text)
-        # Basket controls are deliberately deferred to issue #16.
+        # Out-of-stock products remain unavailable for purchase.
         self.assertContains(response, "disabled class=\"add")
         self.assertIn("no-store", response.headers["Cache-Control"])
 
