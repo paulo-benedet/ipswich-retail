@@ -5,7 +5,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.views.decorators.http import require_POST
 from .forms import AddToBasketForm
-from .basket import get_basket, BASKET_KEY
+from .basket import get_basket, get_basket_summary, BASKET_KEY
 from django.views.decorators.cache import never_cache
 from .models import Product
 
@@ -32,6 +32,7 @@ def products(request):
         clear_url += "?" + urlencode({"category": category})
     return render(request, "catalog/products.html", {
         "products": products, "query": query, "categories": categories,
+        "basket_summary": get_basket_summary(basket),
         "selected_category": category, "clear_search_url": clear_url,
     })
 
