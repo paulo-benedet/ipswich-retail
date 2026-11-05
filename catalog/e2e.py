@@ -144,3 +144,41 @@ class CatalogueBrowserTests(StaticLiveServerTestCase):
                 self.assertTrue(page.evaluate('document.documentElement.scrollWidth <= window.innerWidth'))
             finally:
                 browser.close()
+
+    def test_review_basket_navigation_and_responsive_layout(self):
+        get_user_model().objects.create_user('review@example.com', 'Browser-only-73!')
+        call_command('seed_products')
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            try:
+                page = browser.new_page(viewport={'width': 1343, 'height': 910})
+                page.goto(self.live_server_url)
+                page.get_by_label('Email address').fill('review@example.com')
+                page.get_by_label('Password:', exact=True).fill('Browser-only-73!')
+                page.get_by_role('button', name='Sign in', exact=True).click()
+                page.get_by_role('link', name='View basket →', exact=True).click()
+                expect(page.get_by_role('heading', name='Your basket is empty')).to_be_visible()
+                page.get_by_role('link', name='Browse products →').click()
+                card = page.get_by_role('article').filter(has=page.get_by_role('heading', name='Cotton tote bag', exact=True))
+                card.get_by_role('spinbutton').fill('2')
+                card.get_by_role('button', name='+ Add to basket', exact=True).click()
+                page.get_by_role('link', name='View basket →', exact=True).click()
+                expect(page).to_have_url(self.live_server_url + '/basket/')
+                expect(page.get_by_role('article')).to_contain_text('Quantity: 2')
+                expect(page.get_by_role('complementary', name='Order summary')).to_contain_text('£36.00')
+                expect(page.get_by_role('button', name='Continue to checkout')).to_be_disabled()
+                page.wait_for_function("() => [...document.images].every(i => i.complete && i.naturalWidth > 0)")
+                import os
+                if os.environ.get('CATALOG_SCREENSHOT_DIR'):
+                    page.screenshot(path=os.path.join(os.environ['CATALOG_SCREENSHOT_DIR'], 'basket-desktop.png'), full_page=True)
+                page.set_viewport_size({'width': 390, 'height': 844})
+                self.assertTrue(page.evaluate('document.documentElement.scrollWidth <= innerWidth'))
+                if os.environ.get('CATALOG_SCREENSHOT_DIR'):
+                    page.screenshot(path=os.path.join(os.environ['CATALOG_SCREENSHOT_DIR'], 'basket-mobile.png'), full_page=True)
+                page.get_by_role('link', name='← Continue shopping').click()
+                expect(page.get_by_role('complementary', name='Basket summary')).to_contain_text('£36.00')
+                page.get_by_role('link', name='03 Basket', exact=True).click()
+                page.reload()
+                expect(page.get_by_role('article')).to_contain_text('Quantity: 2')
+            finally:
+                browser.close()

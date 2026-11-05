@@ -14,6 +14,14 @@ def get_basket(request):
     return request.session.get(BASKET_KEY, {}).copy()
 
 
+def get_basket_lines(basket):
+    lines = []
+    for product in Product.objects.filter(pk__in=basket):
+        quantity = basket[str(product.pk)]
+        lines.append({"product": product, "quantity": quantity, "total": product.price * quantity})
+    return lines
+
+
 def get_basket_summary(basket):
     """Count selected units and calculate their current catalogue subtotal."""
     count = 0
