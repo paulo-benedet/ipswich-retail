@@ -219,3 +219,43 @@ class CatalogueBrowserTests(StaticLiveServerTestCase):
                 expect(summary).to_contain_text('£0.00')
             finally:
                 browser.close()
+
+    def test_update_and_remove_basket_products(self):
+        get_user_model().objects.create_user('edit@example.com', 'Browser-only-73!')
+        call_command('seed_products')
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            try:
+                page = browser.new_page(viewport={'width': 1280, 'height': 900})
+                page.goto(self.live_server_url)
+                page.get_by_label('Email address').fill('edit@example.com')
+                page.get_by_label('Password:', exact=True).fill('Browser-only-73!')
+                page.get_by_role('button', name='Sign in', exact=True).click()
+                for name in ['Stoneware mug', 'Cotton tote bag']:
+                    card = page.get_by_role('article').filter(has=page.get_by_role('heading', name=name, exact=True))
+                    card.get_by_role('button', name='+ Add to basket', exact=True).click()
+                page.get_by_role('link', name='View basket →', exact=True).click()
+                mug = page.get_by_role('article').filter(has=page.get_by_role('heading', name='Stoneware mug', exact=True))
+                mug.get_by_role('button', name='Increase quantity for Stoneware mug').click()
+                mug.get_by_role('button', name='Update', exact=True).click()
+                expect(mug).to_contain_text('Quantity: 2')
+                expect(mug.get_by_label('Line total for Stoneware mug')).to_have_text('£24.00')
+                expect(page.get_by_role('complementary', name='Order summary')).to_contain_text('£42.00')
+                import os
+                if os.environ.get('CATALOG_SCREENSHOT_DIR'):
+                    page.screenshot(path=os.path.join(os.environ['CATALOG_SCREENSHOT_DIR'], 'edit-basket-desktop.png'), full_page=True)
+                page.set_viewport_size({'width': 390, 'height': 844})
+                self.assertTrue(page.evaluate('document.documentElement.scrollWidth <= innerWidth'))
+                if os.environ.get('CATALOG_SCREENSHOT_DIR'):
+                    page.screenshot(path=os.path.join(os.environ['CATALOG_SCREENSHOT_DIR'], 'edit-basket-mobile.png'), full_page=True)
+                page.get_by_role('link', name='← Continue shopping').click()
+                expect(page.get_by_role('complementary', name='Basket summary')).to_contain_text('£42.00')
+                page.get_by_role('link', name='View basket →', exact=True).click()
+                expect(mug.get_by_role('spinbutton')).to_have_value('2')
+                mug.get_by_role('button', name='Remove Stoneware mug', exact=True).click()
+                expect(page.get_by_role('article')).to_have_count(1)
+                expect(page.get_by_role('complementary', name='Order summary')).to_contain_text('£18.00')
+                page.get_by_role('button', name='Remove Cotton tote bag', exact=True).click()
+                expect(page.get_by_role('heading', name='Your basket is empty')).to_be_visible()
+            finally:
+                browser.close()
