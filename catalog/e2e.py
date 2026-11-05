@@ -182,3 +182,40 @@ class CatalogueBrowserTests(StaticLiveServerTestCase):
                 expect(page.get_by_role('article')).to_contain_text('Quantity: 2')
             finally:
                 browser.close()
+
+    def test_clear_basket_cancel_confirm_and_summary(self):
+        get_user_model().objects.create_user('clear@example.com', 'Browser-only-73!')
+        call_command('seed_products')
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            try:
+                page = browser.new_page(viewport={'width': 390, 'height': 844})
+                page.goto(self.live_server_url)
+                page.get_by_label('Email address').fill('clear@example.com')
+                page.get_by_label('Password:', exact=True).fill('Browser-only-73!')
+                page.get_by_role('button', name='Sign in', exact=True).click()
+                for name in ['Stoneware mug', 'Cotton tote bag']:
+                    card = page.get_by_role('article').filter(has=page.get_by_role('heading', name=name, exact=True))
+                    card.get_by_role('spinbutton').fill('2')
+                    card.get_by_role('button', name='+ Add to basket', exact=True).click()
+                page.get_by_role('link', name='View basket →', exact=True).click()
+                page.get_by_role('link', name='Clear basket', exact=True).click()
+                expect(page.get_by_role('heading', name='Clear your basket?')).to_be_visible()
+                expect(page.get_by_role('article')).to_have_count(2)
+                self.assertTrue(page.evaluate('document.documentElement.scrollWidth <= innerWidth'))
+                import os
+                if os.environ.get('CATALOG_SCREENSHOT_DIR'):
+                    page.screenshot(path=os.path.join(os.environ['CATALOG_SCREENSHOT_DIR'], 'clear-basket-mobile.png'), full_page=True)
+                page.get_by_role('link', name='Cancel', exact=True).click()
+                expect(page.get_by_role('article')).to_have_count(2)
+                expect(page.get_by_role('complementary', name='Order summary')).to_contain_text('£60.00')
+                page.get_by_role('link', name='Clear basket', exact=True).click()
+                page.get_by_role('button', name='Confirm clear basket', exact=True).click()
+                expect(page.get_by_role('heading', name='Your basket is empty')).to_be_visible()
+                expect(page.get_by_role('status')).to_contain_text('Your basket has been cleared.')
+                page.get_by_role('link', name='Browse products →').click()
+                summary = page.get_by_role('complementary', name='Basket summary')
+                expect(summary).to_contain_text('Your basket · 0 items')
+                expect(summary).to_contain_text('£0.00')
+            finally:
+                browser.close()

@@ -3,13 +3,15 @@
 <body><header><a class="brand" href="{% url 'products' %}">ipswich retail<span>EVERYDAY, CONSIDERED.</span></a><div class="header-right"><span class="step-label">03 / 04</span><a href="{% url 'login' %}">Back to login</a></div></header>
 <main><nav aria-label="Ordering steps"><a href="{% url 'login' %}">01 Login</a><a href="{% url 'products' %}">02 Products</a><span aria-current="step">03 Basket</span><span>04 Checkout</span></nav>
 <section class="basket-intro"><p class="eyebrow">ONE STEP CLOSER</p><h1>Your basket</h1><p>A final look at the good things you’ve chosen.</p></section>
+{% if messages %}<div role="status">{% for message in messages %}<p class="notice">{{ message }}</p>{% endfor %}</div>{% endif %}
+{% if confirm_clear %}<section class="clear-confirmation" aria-labelledby="clear-heading"><h2 id="clear-heading">Clear your basket?</h2><p>This will remove all products from your basket.</p><div class="clear-actions"><a href="{% url 'basket' %}">Cancel</a><form method="post" action="{% url 'clear_basket' %}">{% csrf_token %}<button type="submit" name="confirm" value="yes">Confirm clear basket</button></form></div></section>{% endif %}
 <div class="basket-layout"><section aria-label="Basket contents"><div class="basket-lines">
 {% for line in lines %}<article class="basket-line" aria-labelledby="basket-product-{{ line.product.pk }}">
 <div class="basket-image picture-{{ line.product.sku }}">{% with asset='products/'|add:line.product.sku|add:'.svg' %}<img src="{% static asset %}" alt="{{ line.product.name }}" width="86" height="86">{% endwith %}</div>
 <div class="basket-description"><span class="category">{{ line.product.category }}</span><h2 id="basket-product-{{ line.product.pk }}">{{ line.product.name }}</h2><p>£{{ line.product.price|floatformat:2 }} each · {{ line.product.stock }} available</p><p class="basket-quantity">Quantity: <strong>{{ line.quantity }}</strong></p></div>
 <strong class="line-total" aria-label="Line total for {{ line.product.name }}">£{{ line.total|floatformat:2 }}</strong></article>
 {% empty %}<div class="empty-basket"><h2>Your basket is empty</h2><p>Browse the collection to find something you like.</p><a href="{% url 'products' %}">Browse products →</a></div>{% endfor %}</div>
-{% if lines %}<a class="continue-shopping" href="{% url 'products' %}">← Continue shopping</a>{% endif %}</section>
+{% if lines %}<div class="basket-actions"><a class="continue-shopping" href="{% url 'products' %}">← Continue shopping</a>{% if not confirm_clear %}<a class="clear-basket-link" href="{% url 'clear_basket' %}">Clear basket</a>{% endif %}</div>{% endif %}</section>
 <aside class="order-summary" aria-label="Order summary"><h2>Order summary</h2><p>{{ basket_summary.count }} item{{ basket_summary.count|pluralize }} in your basket</p>
 <dl><div><dt>Subtotal</dt><dd><strong>£{{ basket_summary.subtotal|floatformat:2 }}</strong></dd></div><div><dt>Delivery (demo)</dt><dd>£0.00</dd></div><div class="order-total"><dt>Total</dt><dd>£{{ basket_summary.subtotal|floatformat:2 }}</dd></div></dl>
 <p class="demo-note">Illustrative prices. No payment is taken.</p><button class="checkout-button" disabled aria-describedby="checkout-help">Continue to checkout</button><p id="checkout-help">Checkout will be available in Sprint 4.</p></aside></div>

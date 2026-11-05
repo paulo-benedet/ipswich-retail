@@ -3,7 +3,7 @@ from django.urls import reverse
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_http_methods
 from .forms import AddToBasketForm
 from .basket import get_basket, get_basket_summary, get_basket_lines, BASKET_KEY
 from django.views.decorators.cache import never_cache
@@ -72,4 +72,22 @@ def view_basket(request):
     lines = get_basket_lines(basket)
     return render(request, "catalog/basket.html", {
         "lines": lines, "basket_summary": get_basket_summary(basket),
+    })
+
+
+@never_cache
+@login_required
+@require_http_methods(["GET", "POST"])
+def clear_basket(request):
+    basket = get_basket(request)
+    if request.method == "POST" and request.POST.get("confirm") == "yes":
+        request.session[BASKET_KEY] = {}
+        messages.success(request, "Your basket has been cleared.")
+        return redirect("basket")
+    lines = get_basket_lines(basket)
+    if not lines:
+        return redirect("basket")
+    return render(request, "catalog/basket.html", {
+        "lines": lines, "basket_summary": get_basket_summary(basket),
+        "confirm_clear": True,
     })
