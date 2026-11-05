@@ -91,3 +91,34 @@ def clear_basket(request):
         "lines": lines, "basket_summary": get_basket_summary(basket),
         "confirm_clear": True,
     })
+
+
+@never_cache
+@login_required
+@require_POST
+def update_basket(request, product_id):
+    product = get_object_or_404(Product, pk=product_id)
+    basket = get_basket(request)
+    form = AddToBasketForm(request.POST)
+    if str(product.pk) not in basket:
+        messages.error(request, "This product is no longer in your basket.")
+    elif not form.is_valid():
+        messages.error(request, "Choose a positive whole-number quantity.")
+    elif form.cleaned_data["quantity"] > product.stock:
+        messages.error(request, f"Only {product.stock} units of {product.name} are available. Your basket has not changed.")
+    else:
+        basket[str(product.pk)] = form.cleaned_data["quantity"]
+        request.session[BASKET_KEY] = basket
+        messages.success(request, f"Updated the quantity of {product.name}.")
+    return redirect("basket")
+
+
+@never_cache
+@login_required
+@require_POST
+def remove_from_basket(request, product_id):
+    basket = get_basket(request)
+    if basket.pop(str(product_id), None) is not None:
+        request.session[BASKET_KEY] = basket
+        messages.success(request, "Product removed from your basket.")
+    return redirect("basket")
