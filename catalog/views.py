@@ -5,7 +5,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.views.decorators.http import require_POST
 from .forms import AddToBasketForm
-from .basket import get_basket, get_basket_summary, BASKET_KEY
+from .basket import get_basket, get_basket_summary, get_basket_lines, BASKET_KEY
 from django.views.decorators.cache import never_cache
 from .models import Product
 
@@ -63,3 +63,13 @@ def add_to_basket(request, product_id):
     if params:
         target += "?" + urlencode(params)
     return redirect(target)
+
+
+@never_cache
+@login_required
+def view_basket(request):
+    basket = get_basket(request)
+    lines = get_basket_lines(basket)
+    return render(request, "catalog/basket.html", {
+        "lines": lines, "basket_summary": get_basket_summary(basket),
+    })
