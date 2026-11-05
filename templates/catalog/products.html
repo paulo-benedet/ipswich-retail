@@ -1,42 +1,24 @@
-{% load static %}
-<!doctype html>
-<html lang="en-GB">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Products | Ipswich Retail</title>
-    <link rel="stylesheet" href="{% static 'catalog.css' %}">
-  </head>
-  <body>
-    <header><a class="brand" href="{% url 'products' %}">ipswich retail<span>EVERYDAY, CONSIDERED.</span></a>
-      <div class="header-right"><span class="step-label">02 / 04</span><a href="{% url 'login' %}">Back to login</a></div>
-    </header>
-    <main>
-      <nav aria-label="Ordering steps"><a href="{% url 'login' %}">01 Login</a><span aria-current="step">02 Products</span><a href="{% url 'basket' %}">03 Basket</a><span>04 Checkout</span></nav>
-      <section class="intro">
-        <div>
-          <p class="eyebrow">THE EVERYDAY COLLECTION</p>
-          <h1>A few good things for your home.</h1>
-          <p>Browse the collection and choose what goes in your basket.</p>
-        </div>
-        <aside class="summary" aria-label="Basket summary"><span>Your basket · {{ basket_summary.count }} item{{ basket_summary.count|pluralize }}</span><strong aria-label="Basket subtotal">£{{ basket_summary.subtotal|floatformat:2 }}</strong><a href="{% url 'basket' %}">View basket →</a></aside>
-      </section> {% if messages %}<div class="basket-messages" aria-live="polite">{% for message in messages %}<p class="basket-message {{ message.tags }}" role="{% if message.tags == 'error' %}alert{% else %}status{% endif %}">{{ message }}</p>{% endfor %}</div>{% endif %} <form class="search" method="get" action="{% url 'products' %}" role="search"><input type="search" name="q" aria-label="Search products" aria-describedby="search-help" placeholder="Search products..." value="{{ query }}"><select name="category" id="category-filter" aria-label="Category" onchange="this.form.requestSubmit()">
-          <option value="">All categories</option> {% for category in categories %}<option value="{{ category }}" {% if category == selected_category %} selected{% endif %}>{{ category }}</option>{% endfor %}
-        </select><noscript><button type="submit">Apply filters</button></noscript><button type="submit" class="visually-hidden">Search</button></form>
-      <p class="search-help" id="search-help">Type a product name and press Enter.{% if query %} <a href="{{ clear_search_url }}" class="clear-search">Clear search</a>{% endif %}</p>
-      <p class="count">{{ products|length }} product{{ products|length|pluralize }}</p>
-      <div class="products">{% for product in products %}<article class="product" aria-labelledby="product-{{ product.pk }}">
-          <div class="picture picture-{{ product.sku }}">{% with asset='products/'|add:product.sku|add:'.svg' %}<img src="{% static asset %}" alt="" width="110" height="100">{% endwith %}</div>
-          <div class="card-content">
-            <div class="category">{{ product.category }}</div>
-            <h2 id="product-{{ product.pk }}">{{ product.name }}</h2>
-            <p class="description">{{ product.description }}</p>
-            <div class="details">
-              <div><strong class="price">£{{ product.price|floatformat:2 }}</strong><span class="availability">{% if product.stock %}{{ product.stock }} available{% else %}Currently unavailable{% endif %}</span></div>{% if product.stock %}<form class="basket-form" method="post" action="{% url 'add_to_basket' product.pk %}"> {% csrf_token %}<input type="hidden" name="q" value="{{ query }}"><input type="hidden" name="category" value="{{ selected_category }}"> {% if product.remaining %}<div class="quantity-control"><button type="button" aria-label="Decrease quantity for {{ product.name }}" onclick="this.nextElementSibling.stepDown()">−</button><input type="number" name="quantity" value="1" min="1" max="{{ product.remaining }}" step="1" required aria-label="Quantity for {{ product.name }}"><button type="button" aria-label="Increase quantity for {{ product.name }}" onclick="this.previousElementSibling.stepUp()">+</button></div><button type="submit" class="add">+ Add to basket</button>{% else %}<button disabled class="add sold-out">Stock limit reached</button>{% endif %} </form>{% else %}<button disabled class="add sold-out" title="Out of stock">Sold out</button>{% endif %}
-            </div>{% if product.basket_quantity %}<p class="in-basket">In your basket: {{ product.basket_quantity }}</p>{% endif %}
-          </div>
-        </article>{% empty %}{% if query %}<p class="empty-results" role="status">No products match “{{ query }}”{% if selected_category %} in {{ selected_category }}{% endif %}. Try another product name or <a href="{{ clear_search_url }}">clear your search</a>.</p>{% else %}<p>No products are available at the moment. Please check back soon.</p>{% endif %}{% endfor %}</div>
-      <p class="notice">Your selections are retained during this session. Adding to the basket does not reserve stock.</p>
-    </main>
-  </body>
-</html>
+{% load static %}<!doctype html>
+<html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Products | Ipswich Retail</title><link rel="stylesheet" href="{% static 'catalog.css' %}"></head>
+<body><header><a class="brand" href="{% url 'products' %}">ipswich retail<span>EVERYDAY, CONSIDERED.</span></a><div class="header-right"><span class="step-label">02 / 04</span><a href="{% url 'login' %}">Back to login</a></div></header>
+<main><nav aria-label="Ordering steps"><a href="{% url 'login' %}">01 Login</a><span aria-current="step">02 Products</span><a href="{% url 'basket' %}">03 Basket</a><span>04 Checkout</span></nav>
+<section class="intro"><div><p class="eyebrow">THE EVERYDAY COLLECTION</p><h1>A few good things for your home.</h1><p>Browse the collection and choose what goes in your basket.</p></div><aside class="summary" aria-label="Basket summary"><span>Your basket · {{ basket_summary.count }} item{{ basket_summary.count|pluralize }}</span><strong aria-label="Basket subtotal">£{{ basket_summary.subtotal|floatformat:2 }}</strong><a href="{% url 'basket' %}">View basket →</a></aside></section>
+{% if messages %}<div class="basket-messages" aria-live="polite">{% for message in messages %}<p class="basket-message {{ message.tags }}" role="{% if message.tags == 'error' %}alert{% else %}status{% endif %}">{{ message }}</p>{% endfor %}</div>{% endif %}
+<form class="search" method="get" action="{% url 'products' %}" role="search">
+<input type="search" name="q" aria-label="Search products" aria-describedby="search-help" placeholder="Search products..." value="{{ query }}">
+<select name="category" id="category-filter" aria-label="Category" onchange="this.form.requestSubmit()">
+<option value="">All categories</option>
+{% for category in categories %}<option value="{{ category }}"{% if category == selected_category %} selected{% endif %}>{{ category }}</option>{% endfor %}
+</select><noscript><button type="submit">Apply filters</button></noscript>
+<button type="submit" class="visually-hidden">Search</button>
+</form>
+<p class="search-help" id="search-help">Type a product name and press Enter.{% if query %} <a href="{{ clear_search_url }}" class="clear-search">Clear search</a>{% endif %}</p>
+<p class="count">{{ products|length }} product{{ products|length|pluralize }}</p>
+<div class="products">{% for product in products %}<article class="product" aria-labelledby="product-{{ product.pk }}">
+<div class="picture picture-{{ product.sku }}">{% with asset='products/'|add:product.sku|add:'.svg' %}<img src="{% static asset %}" alt="" width="110" height="100">{% endwith %}</div>
+<div class="card-content"><div class="category">{{ product.category }}</div><h2 id="product-{{ product.pk }}">{{ product.name }}</h2><p class="description">{{ product.description }}</p><div class="details"><div><strong class="price">£{{ product.price|floatformat:2 }}</strong><span class="availability">{% if product.stock %}{{ product.stock }} available{% else %}Currently unavailable{% endif %}</span></div>{% if product.stock %}<form class="basket-form" method="post" action="{% url 'add_to_basket' product.pk %}">
+{% csrf_token %}<input type="hidden" name="q" value="{{ query }}"><input type="hidden" name="category" value="{{ selected_category }}">
+{% if product.remaining %}<div class="quantity-control"><button type="button" aria-label="Decrease quantity for {{ product.name }}" onclick="this.nextElementSibling.stepDown()">−</button><input type="number" name="quantity" value="1" min="1" max="{{ product.remaining }}" step="1" required aria-label="Quantity for {{ product.name }}"><button type="button" aria-label="Increase quantity for {{ product.name }}" onclick="this.previousElementSibling.stepUp()">+</button></div><button type="submit" class="add">+ Add to basket</button>{% else %}<button disabled class="add sold-out">Stock limit reached</button>{% endif %}
+</form>{% else %}<button disabled class="add sold-out" title="Out of stock">Sold out</button>{% endif %}</div>{% if product.basket_quantity %}<p class="in-basket">In your basket: {{ product.basket_quantity }}</p>{% endif %}</div></article>{% empty %}{% if query %}<p class="empty-results" role="status">No products match “{{ query }}”{% if selected_category %} in {{ selected_category }}{% endif %}. Try another product name or <a href="{{ clear_search_url }}">clear your search</a>.</p>{% else %}<p>No products are available at the moment. Please check back soon.</p>{% endif %}{% endfor %}</div>
+<p class="notice">Your selections are retained during this session. Adding to the basket does not reserve stock.</p>
+</main></body></html>
