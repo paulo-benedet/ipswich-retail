@@ -128,14 +128,59 @@ def remove_from_basket(request, product_id):
 @login_required
 @require_http_methods(["GET", "POST"])
 def checkout(request):
+    import uuid
+    from django.core import signing
+    from django.db import DatabaseError
+    from .models import Order
+    from .orders import place_order, StockError
+
     basket = get_basket(request)
+    if request.method == "GET" and request.GET.get("confirmed"):
+        reference = request.GET["confirmed"]
+        if reference == request.session.get("confirmed_order"):
+            order = Order.objects.filter(reference=reference, customer=request.user).first()
+            if order:
+                return render(request, "catalog/order_confirmation.html", {"order": order})
+        return redirect("basket")
+
+    token = request.session.get("checkout_token")
+    if not token:
+        token = signing.dumps({"key": str(uuid.uuid4()), "user": request.user.pk,
+                               "session": request.session.session_key}, salt="checkout")
+        request.session["checkout_token"] = token
+    form = DeliveryDetailsForm(request.POST if request.method == "POST" else None)
+    if request.method == "POST":
+        try:
+            payload = signing.loads(request.POST.get("submission_token", ""), salt="checkout")
+            if payload["user"] != request.user.pk or payload["session"] != request.session.session_key:
+                raise signing.BadSignature()
+            submission_key = uuid.UUID(payload["key"])
+        except (signing.BadSignature, KeyError, ValueError, TypeError):
+            submission_key = None
+        existing = Order.objects.filter(submission_key=submission_key, customer=request.user).first() if submission_key else None
+        if existing:
+            request.session["confirmed_order"] = str(existing.reference)
+            return redirect(reverse("checkout") + "?confirmed=" + str(existing.reference))
+        if form.is_valid():
+            if not submission_key:
+                form.add_error(None, "This checkout form has expired. Please submit the form again.")
+            elif basket:
+                try:
+                    order = place_order(request.user, submission_key, basket, form.cleaned_data)
+                except StockError as error:
+                    form.add_error(None, str(error))
+                except DatabaseError:
+                    form.add_error(None, "We could not save your order. Your basket has been kept. Please try again.")
+                else:
+                    request.session[BASKET_KEY] = {}
+                    request.session.pop("checkout_token", None)
+                    request.session["confirmed_order"] = str(order.reference)
+                    return redirect(reverse("checkout") + "?confirmed=" + str(order.reference))
     lines = get_basket_lines(basket)
     if not lines:
         messages.info(request, "Add products to your basket before proceeding to checkout.")
         return redirect("basket")
-    form = DeliveryDetailsForm(request.POST if request.method == "POST" else None)
-    details_valid = request.method == "POST" and form.is_valid()
     return render(request, "catalog/checkout.html", {
         "form": form, "lines": lines, "basket_summary": get_basket_summary(basket),
-        "details_valid": details_valid,
+        "submission_token": token,
     })

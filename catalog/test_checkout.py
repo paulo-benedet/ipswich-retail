@@ -1,7 +1,7 @@
 from decimal import Decimal
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
-from .models import Product
+from .models import Product, Order
 
 
 class CheckoutTests(TestCase):
@@ -30,17 +30,17 @@ class CheckoutTests(TestCase):
         self.assertContains(response, 'Enter your first name.')
         self.assertContains(response, 'value="12 Example Street"')
         self.assertContains(response, 'aria-invalid="true"')
-        self.assertFalse(response.context['details_valid'])
+        self.assertTrue(response.context['form'].errors)
 
-    def test_valid_details_do_not_place_order_or_change_basket_stock(self):
-        before = dict(self.client.session['basket'])
-        response = self.client.post('/checkout/', self.data)
-        self.assertTrue(response.context['details_valid'])
-        self.assertEqual(response.context['form'].cleaned_data['postcode'], 'IP1 1AA')
-        self.assertContains(response, 'No order has been placed.')
-        self.assertEqual(self.client.session['basket'], before)
+    def test_valid_details_place_order_and_update_stock(self):
+        response = self.client.get('/checkout/')
+        self.data['submission_token'] = response.context['submission_token']
+        response = self.client.post('/checkout/', self.data, follow=True)
+        self.assertContains(response, 'Your demo order is confirmed')
+        self.assertEqual(Order.objects.get().postcode, 'IP1 1AA')
+        self.assertEqual(self.client.session['basket'], {})
         self.product.refresh_from_db()
-        self.assertEqual(self.product.stock, 5)
+        self.assertEqual(self.product.stock, 3)
 
     def test_empty_or_deleted_product_basket_cannot_checkout(self):
         self.product.delete()
