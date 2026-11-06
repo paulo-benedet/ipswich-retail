@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.views.decorators.http import require_POST, require_http_methods
-from .forms import AddToBasketForm
+from .forms import AddToBasketForm, DeliveryDetailsForm
 from .basket import get_basket, get_basket_summary, get_basket_lines, BASKET_KEY
 from django.views.decorators.cache import never_cache
 from .models import Product
@@ -122,3 +122,20 @@ def remove_from_basket(request, product_id):
         request.session[BASKET_KEY] = basket
         messages.success(request, "Product removed from your basket.")
     return redirect("basket")
+
+
+@never_cache
+@login_required
+@require_http_methods(["GET", "POST"])
+def checkout(request):
+    basket = get_basket(request)
+    lines = get_basket_lines(basket)
+    if not lines:
+        messages.info(request, "Add products to your basket before proceeding to checkout.")
+        return redirect("basket")
+    form = DeliveryDetailsForm(request.POST if request.method == "POST" else None)
+    details_valid = request.method == "POST" and form.is_valid()
+    return render(request, "catalog/checkout.html", {
+        "form": form, "lines": lines, "basket_summary": get_basket_summary(basket),
+        "details_valid": details_valid,
+    })

@@ -166,7 +166,7 @@ class CatalogueBrowserTests(StaticLiveServerTestCase):
                 expect(page).to_have_url(self.live_server_url + '/basket/')
                 expect(page.get_by_role('article')).to_contain_text('Quantity: 2')
                 expect(page.get_by_role('complementary', name='Order summary')).to_contain_text('£36.00')
-                expect(page.get_by_role('button', name='Continue to checkout')).to_be_disabled()
+                expect(page.get_by_role('link', name='Continue to checkout')).to_have_attribute('href', '/checkout/')
                 page.wait_for_function("() => [...document.images].every(i => i.complete && i.naturalWidth > 0)")
                 import os
                 if os.environ.get('CATALOG_SCREENSHOT_DIR'):
@@ -257,5 +257,39 @@ class CatalogueBrowserTests(StaticLiveServerTestCase):
                 expect(page.get_by_role('complementary', name='Order summary')).to_contain_text('£18.00')
                 page.get_by_role('button', name='Remove Cotton tote bag', exact=True).click()
                 expect(page.get_by_role('heading', name='Your basket is empty')).to_be_visible()
+            finally:
+                browser.close()
+
+
+    def test_checkout_delivery_details(self):
+        get_user_model().objects.create_user('delivery@example.com', 'Browser-only-73!')
+        call_command('seed_products')
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            try:
+                page = browser.new_page(viewport={'width': 1280, 'height': 1000})
+                page.goto(self.live_server_url)
+                page.get_by_label('Email address').fill('delivery@example.com')
+                page.get_by_label('Password:', exact=True).fill('Browser-only-73!')
+                page.get_by_role('button', name='Sign in', exact=True).click()
+                page.goto(self.live_server_url + '/checkout/')
+                expect(page).to_have_url(self.live_server_url + '/basket/')
+                page.goto(self.live_server_url + '/products/')
+                page.get_by_role('article').first.get_by_role('button', name='+ Add to basket', exact=True).click()
+                page.get_by_role('link', name='View basket →', exact=True).click()
+                page.get_by_role('link', name='Continue to checkout').click()
+                expect(page.get_by_role('heading', name='Checkout', exact=True)).to_be_visible()
+                page.get_by_role('button', name='Check delivery details').click()
+                expect(page.get_by_role('alert')).to_contain_text('Enter your first name.')
+                for label, value in {'First name': 'Alex', 'Last name': 'Taylor', 'Email address': 'alex@example.com', 'Address line 1': '12 Example Street', 'Town or city': 'Ipswich', 'Postcode': 'IP1 1AA'}.items():
+                    page.get_by_label(label, exact=True).fill(value)
+                page.get_by_role('button', name='Check delivery details').click()
+                expect(page.get_by_role('status')).to_contain_text('No order has been placed.')
+                expect(page.get_by_label('First name', exact=True)).to_have_value('Alex')
+                expect(page.get_by_role('button', name='Place demo order')).to_be_disabled()
+                page.screenshot(path='/tmp/checkout29-desktop.png', full_page=True)
+                page.set_viewport_size({'width': 390, 'height': 844})
+                self.assertTrue(page.evaluate('document.documentElement.scrollWidth <= innerWidth'))
+                page.screenshot(path='/tmp/checkout29-mobile.png', full_page=True)
             finally:
                 browser.close()
